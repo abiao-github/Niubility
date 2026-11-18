@@ -1,7 +1,7 @@
 {
   "name": "niubility",
   "productName": "牛B下载器",
-  "version": "2.4.2",
+  "version": "2.4.3",
   "description": "牛B下载器 (NiuBiliTy) — 多协议下载器：磁力/种子、HTTP(S)、FTP(S)、HLS/DASH、Metalink、IPFS，带资源搜索与自建 DHT 索引",
   "main": "src/main.js",
   "license": "MIT",
@@ -12,9 +12,9 @@
     "test": "node test/run-e2e.js",
     "test:unit": "node test/unit-relevance.js && node test/unit-expand.js && node test/unit-segmented.js && node test/unit-http-seg.js && node test/unit-chunked.js && node test/unit-sniff.js && node test/unit-cloud.js && node test/unit-queue.js && node test/unit-metadata.mjs && node --test test/unit-stream-tokens.js && node --test indexer/test/",
     "test:indexer": "node --test indexer/test/",
-    "pack": "electron-builder --dir --arm64 --publish never -c.electronDist=node_modules/electron/dist",
-    "dist": "electron-builder --mac dmg zip --arm64 --publish never -c.electronDist=node_modules/electron/dist",
-    "build:mac": "electron-builder --mac dmg zip --arm64 --publish never -c.electronDist=node_modules/electron/dist",
+    "pack": "electron-builder --dir --arm64 --publish never",
+    "dist": "electron-builder --mac dmg zip --arm64 --publish never",
+    "build:mac": "electron-builder --mac dmg zip --arm64 --publish never",
     "build:win": "electron-builder --win nsis --x64 --publish never",
     "build:linux": "electron-builder --linux AppImage deb --x64 --publish never",
     "build:all": "npm run build:mac && npm run build:win && npm run build:linux"

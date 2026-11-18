@@ -14,7 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-14        # Apple Silicon
+          - os: macos-15        # Apple Silicon
             script: npm run build:mac
           - os: windows-latest
             script: npm run build:win

@@ -1,7 +1,7 @@
 {
   "name": "niubility",
   "productName": "牛B下载器",
-  "version": "2.4.1",
+  "version": "2.4.2",
   "description": "牛B下载器 (NiuBiliTy) — 多协议下载器：磁力/种子、HTTP(S)、FTP(S)、HLS/DASH、Metalink、IPFS，带资源搜索与自建 DHT 索引",
   "main": "src/main.js",
   "license": "MIT",

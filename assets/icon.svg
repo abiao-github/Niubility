@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" gradientUnits="userSpaceOnUse" x1="60" y1="60" x2="964" y2="964">
+      <stop offset="0" stop-color="#262a38"/>
+      <stop offset="0.55" stop-color="#151822"/>
+      <stop offset="1" stop-color="#0a0c11"/>
+    </linearGradient>
+    <!-- userSpaceOnUse：竖笔包围盒宽度为 0，用对象包围盒会整根不可见 -->
+    <linearGradient id="flame" gradientUnits="userSpaceOnUse" x1="352" y1="240" x2="352" y2="920">
+      <stop offset="0" stop-color="#7ae2ff"/>
+      <stop offset="0.45" stop-color="#2d7ff9"/>
+      <stop offset="1" stop-color="#35e0a1"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.38" r="0.62">
+      <stop offset="0" stop-color="#2d7ff9" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#2d7ff9" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="rim" gradientUnits="userSpaceOnUse" x1="512" y1="32" x2="512" y2="992">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.02"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 底板 -->
+  <rect x="32" y="32" width="960" height="960" rx="224" fill="url(#bg)"/>
+  <rect x="32" y="32" width="960" height="960" rx="224" fill="url(#glow)"/>
+  <rect x="33" y="33" width="958" height="958" rx="223" fill="none" stroke="url(#rim)" stroke-width="2"/>
+
+  <!-- 背景 peer 点（swarm） -->
+  <g fill="#5fd7ff" opacity="0.34">
+    <circle cx="176" cy="330" r="11"/>
+    <circle cx="862" cy="286" r="9"/>
+    <circle cx="152" cy="640" r="8"/>
+    <circle cx="872" cy="672" r="11"/>
+    <circle cx="250" cy="852" r="7"/>
+    <circle cx="790" cy="858" r="9"/>
+  </g>
+
+  <g id="mark" transform="translate(-6,0)">
+  <!-- 字母 B：一根竖笔 + 两个碗，笔画即轮廓 -->
+  <g stroke="url(#flame)" stroke-width="64" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M288 300 L548 300 C 652 300 696 350 696 408 C 696 466 652 516 548 516 L248 516"/>
+    <path d="M248 516 L584 516 C 700 516 744 574 744 636 C 744 698 700 752 584 752 L430 752"/>
+  </g>
+
+  <!-- 牛字的「撇」：从右上扫到左下，正好压在 B 的脊梁顶上 -->
+  <!-- 牛角：粗重毛笔笔触，起点低于竖笔顶端（牛字的撇要比竖低），并让开竖笔 -->
+  <g stroke="url(#flame)" stroke-linecap="round" fill="none">
+    <path d="M258 252 C 242 292 232 320 222 352" stroke-width="84" stroke-opacity="0.98"/>
+    <path d="M222 352 C 208 394 192 428 176 458" stroke-width="62" stroke-opacity="0.97"/>
+    <path d="M176 458 C 164 484 154 504 144 522" stroke-width="34" stroke-opacity="0.96"/>
+    <path d="M144 522 C 138 534 134 542 130 550" stroke-width="16" stroke-opacity="0.95"/>
+  </g>
+
+  <!-- 竖笔向下 = 下载；到下方折向右侧再向上回卷（像牛尾巴/七的弯折钩），末端是向上箭头 = 上传 -->
+  <g stroke="url(#flame)" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M352 168 L352 736" stroke-width="64"/>
+    <path d="M352 742 C 352 820 396 858 470 858 L 726 858 C 796 858 848 812 848 742" stroke-width="64"/>
+    <path d="M848 742 L848 528" stroke-width="64"/>
+  </g>
+  <!-- 上传箭头 -->
+  <path d="M848 424 L916 534 L780 534 Z" fill="url(#flame)"/>
+  </g>
+</svg>

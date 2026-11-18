@@ -1,0 +1,12 @@
+# 索引服务 token（本机副本，勿提交）
+.index-token.txt
+
+# Local dependencies, build output, and machine-specific files
+node_modules/
+dist/
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example
+coverage/

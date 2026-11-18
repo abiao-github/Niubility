@@ -1,0 +1,26 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+  body { margin: 0; padding: 28px; background: #15171f; color: #e6e7ec;
+         font: 14px -apple-system, "PingFang SC", sans-serif; }
+  h1 { font-size: 18px; }
+  label { display: block; margin: 14px 0 6px; font-size: 13px; color: #a8aab6; }
+  input { width: 420px; max-width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #2a2e3a;
+          background: #1d2029; color: #e6e7ec; font-size: 13px; }
+  button { margin-top: 16px; padding: 8px 18px; border-radius: 8px; border: none;
+           background: #2d7ff9; color: #fff; cursor: pointer; }
+  .hint { font-size: 12px; color: #7d8090; margin-top: 6px; }
+  #msg { margin-top: 12px; font-size: 12px; }
+</style></head><body>
+  <h1>牛B下载器 · 扩展设置</h1>
+  <label>本地接口地址</label>
+  <input id="base" placeholder="http://127.0.0.1:8977" />
+  <div class="hint">一般不用改；如果 App 里显示的不是 8977，就填 App 显示的那个。</div>
+
+  <label>浏览器扩展令牌</label>
+  <input id="token" placeholder="在 App 的 ⚙ 设置 里点"复制"" />
+  <div class="hint">令牌只存在浏览器本地，用来证明请求来自你自己。</div>
+
+  <button id="save">保存并测试连接</button>
+  <div id="msg"></div>
+  <script src="options.js"></script>
+</body></html>

@@ -1,0 +1,19 @@
+{
+  "name": "niubility-index",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "description": "牛逼BT 的 DHT 索引服务：爬 announce_peer 抓元数据，提供 /search 查询",
+  "main": "run.js",
+  "scripts": {
+    "start": "node run.js",
+    "test": "node --test test/"
+  },
+  "dependencies": {
+    "bencode": "^4.0.1",
+    "bittorrent-dht": "^11.0.12",
+    "bittorrent-protocol": "^5.0.9",
+    "ut_metadata": "^5.0.1"
+  },
+  "type": "module"
+}

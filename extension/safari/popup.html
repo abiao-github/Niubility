@@ -1,0 +1,21 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+  body { width: 300px; margin: 0; padding: 14px; background: #15171f; color: #e6e7ec;
+         font: 13px -apple-system, "PingFang SC", sans-serif; }
+  h1 { font-size: 14px; margin: 0 0 10px; }
+  .status { font-size: 12px; padding: 6px 8px; border-radius: 6px; background: #1d2029; margin-bottom: 10px; }
+  .ok { color: #35e0a1; } .bad { color: #ff7b72; }
+  button { width: 100%; padding: 7px; margin-top: 6px; border-radius: 7px; border: 1px solid #2a2e3a;
+           background: #232733; color: #e6e7ec; cursor: pointer; font-size: 12px; }
+  button.primary { background: #2d7ff9; border-color: #2d7ff9; }
+  button:hover { filter: brightness(1.1); }
+  a { color: #7ae2ff; font-size: 11px; }
+</style></head><body>
+  <h1>牛B下载器</h1>
+  <div id="status" class="status">检查中…</div>
+  <button id="add-page" class="primary">下载本页视频</button>
+  <button id="add-tab">把当前标签页链接发给下载器</button>
+  <button id="open-options">设置令牌 / 地址</button>
+  <p style="margin:10px 0 0"><a href="#" id="help">先在 App 的 ⚙ 设置 里复制"浏览器扩展令牌"</a></p>
+  <script src="popup.js"></script>
+</body></html>

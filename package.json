@@ -1,0 +1,173 @@
+{
+  "name": "niubility",
+  "productName": "牛B下载器",
+  "version": "2.4.0",
+  "description": "牛B下载器 (NiuBiliTy) — 多协议下载器：磁力/种子、HTTP(S)、FTP(S)、HLS/DASH、Metalink、IPFS，带资源搜索与自建 DHT 索引",
+  "main": "src/main.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "postinstall": "node shim.cjs",
+    "test": "node test/run-e2e.js",
+    "test:unit": "node test/unit-relevance.js && node test/unit-expand.js && node test/unit-segmented.js && node test/unit-http-seg.js && node test/unit-chunked.js && node test/unit-sniff.js && node test/unit-cloud.js && node test/unit-queue.js && node test/unit-metadata.mjs && node --test test/unit-stream-tokens.js && node --test indexer/test/",
+    "test:indexer": "node --test indexer/test/",
+    "pack": "electron-builder --dir --arm64 -c.electronDist=node_modules/electron/dist",
+    "dist": "electron-builder --mac dmg zip --arm64 -c.electronDist=node_modules/electron/dist",
+    "build:mac": "electron-builder --mac dmg zip --arm64 -c.electronDist=node_modules/electron/dist",
+    "build:win": "electron-builder --win nsis --x64",
+    "build:linux": "electron-builder --linux AppImage deb --x64",
+    "build:all": "npm run build:mac && npm run build:win && npm run build:linux"
+  },
+  "dependencies": {
+    "basic-ftp": "^6.2.6",
+    "fast-xml-parser": "^5.12.1",
+    "m3u8-parser": "^7.2.1",
+    "mpd-parser": "^1.4.1",
+    "undici": "^6.29.1",
+    "webtorrent": "^2.5.1"
+  },
+  "devDependencies": {
+    "electron": "^45.3.4",
+    "electron-builder": "26.18.0"
+  },
+  "allowScripts": {
+    "electron@45.3.4": true,
+    "electron-winstaller@5.4.0": true,
+    "utp-native@2.5.3": true,
+    "node-datachannel@0.32.3": true,
+    "bufferutil@4.2.0": true,
+    "utf-8-validate@6.0.6": true
+  },
+  "build": {
+    "appId": "com.niubility.downloader",
+    "productName": "牛B下载器",
+    "copyright": "Copyright © 2026 NiuBiliTy contributors",
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "files": [
+      "src/**/*",
+      "assets/icon.png",
+      "LICENSE",
+      "package.json",
+      "!**/*.md",
+      "!test/**",
+      "!dist/**"
+    ],
+    "extraResources": [
+      {
+        "from": "indexer",
+        "to": "indexer",
+        "filter": [
+          "**/*",
+          "!test/**",
+          "!node_modules/**"
+        ]
+      },
+      {
+        "from": "indexer/node_modules",
+        "to": "indexer/node_modules",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "asarUnpack": [
+      "node_modules/utp-native/**",
+      "node_modules/node-datachannel/**"
+    ],
+    "npmRebuild": false,
+    "afterPack": "scripts/after-pack.js",
+    "mac": {
+      "category": "public.app-category.utilities",
+      "icon": "assets/icon.png",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "darkModeSupport": true
+    },
+    "dmg": {
+      "title": "牛B下载器",
+      "contents": [
+        {
+          "x": 140,
+          "y": 200,
+          "type": "file"
+        },
+        {
+          "x": 400,
+          "y": 200,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "protocols": [
+      {
+        "name": "Magnet 链接",
+        "schemes": [
+          "magnet"
+        ]
+      }
+    ],
+    "fileAssociations": [
+      {
+        "ext": "torrent",
+        "name": "BitTorrent 种子",
+        "role": "Viewer"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico",
+      "artifactName": "${productName}-${version}-win-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "牛B下载器",
+      "createDesktopShortcut": true
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Network",
+      "icon": "assets/icon-512.png",
+      "artifactName": "${productName}-${version}-linux-${arch}.${ext}",
+      "executableName": "niubility"
+    }
+  },
+  "author": "NiuBiliTy contributors"
+}

@@ -2,6 +2,8 @@
 
 [English](README.md) · **中文**
 
+[下载最新安装包](https://github.com/abiao-github/Niubility/releases/latest) · Windows · macOS · Linux
+
 一个下载器吃掉所有协议：BitTorrent、HTTP(S)、FTP(S)、HLS/DASH、Metalink、IPFS、eD2K，以及
 迅雷 / 旋风 / 快车链接 —— 自带资源搜索层，还能边下边播。
 
@@ -83,12 +85,15 @@
 
 ## 安装
 
-| 平台 | 文件 | 怎么装 |
+安装包在 GitHub 的[发行版（Releases）页面](https://github.com/abiao-github/Niubility/releases/latest)，不在仓库的 Code 文件列表里。
+
+| 平台 | 下载文件 | 怎么装 |
 |---|---|---|
-| macOS（Apple Silicon） | `牛B下载器-2.4.0-arm64.dmg` | 拖进「应用程序」。首次打开要 **右键 → 打开**（ad-hoc 签名，未公证） |
-| Windows x64 | `牛B下载器-2.4.0-win-x64.exe` | 运行安装程序。未签名 → SmartScreen 提示「更多信息 → 仍要运行」 |
-| Linux x64 | `牛B下载器-2.4.0-linux-x64.AppImage` | `chmod +x` 后直接运行 |
-| Linux x64 | `牛B下载器-2.4.0-linux-x64.deb` | `sudo dpkg -i`，装到 `/opt/NiuBiliTy/` |
+| macOS（Apple Silicon） | `.dmg` | 拖进「应用程序」。首次打开要 **右键 → 打开**（ad-hoc 签名，未公证） |
+| Windows x64 | `.exe` | 运行安装程序。未签名 → SmartScreen 提示「更多信息 → 仍要运行」 |
+| Linux x64 | `.AppImage` | `chmod +x` 后直接运行 |
+| Linux x64 | `.deb` | `sudo dpkg -i`，装到 `/opt/NiuBiliTy/` |
+| Safari 扩展（macOS） | `NiuBiliTy-Safari-macos-arm64.zip` | 按照 [Safari 安装指南](./extension/README.md#safari-install-macos) 操作 |
 
 `ffmpeg` 可选，但边下边播转码需要它：
 `brew install ffmpeg`（macOS）· `sudo apt install ffmpeg`（Linux）· Windows 把 `ffmpeg.exe` 放进 PATH。
@@ -133,6 +138,8 @@ npm run build:linux  # AppImage + .deb（x64）
 npm run test:unit    # 单元测试 + 索引器测试
 npm run test         # 17 组隔离运行的 e2e
 ```
+
+`test/` 目录保留在源码仓库中，用于回归测试和贡献者开发；打包安装程序时会排除该目录。
 
 交叉构建出来的安装包没在目标系统上验证过 —— `.github/workflows/build.yml` 会在三个原生 runner
 上分别构建并上传产物。

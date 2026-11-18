@@ -2,6 +2,8 @@
 
 **English** · [中文](README_CN.md)
 
+[Download the latest installers](https://github.com/abiao-github/Niubility/releases/latest) · Windows · macOS · Linux
+
 One download client for everything: BitTorrent, HTTP(S), FTP(S), HLS/DASH, Metalink, IPFS, eD2K and
 `thunder://` / `qqdl://` / `flashget://` links — with a built-in discovery layer and
 play-while-downloading.
@@ -85,12 +87,15 @@ parallelism helps there), and every competitor above is far more battle-tested. 
 
 ## Install
 
-| Platform | File | How |
+Installers are attached to the GitHub [Releases](https://github.com/abiao-github/Niubility/releases/latest) page, not the repository's Code file list.
+
+| Platform | Download | How |
 |---|---|---|
-| macOS (Apple Silicon) | `牛B下载器-2.4.0-arm64.dmg` | Drag to Applications. First launch: **right-click → Open** (ad-hoc signed, not notarized) |
-| Windows x64 | `牛B下载器-2.4.0-win-x64.exe` | Run the installer. Unsigned → SmartScreen: *More info → Run anyway* |
-| Linux x64 | `牛B下载器-2.4.0-linux-x64.AppImage` | `chmod +x` then run |
-| Linux x64 | `牛B下载器-2.4.0-linux-x64.deb` | `sudo dpkg -i`, installs to `/opt/NiuBiliTy/` |
+| macOS (Apple Silicon) | `.dmg` | Drag to Applications. First launch: **right-click → Open** (ad-hoc signed, not notarized) |
+| Windows x64 | `.exe` | Run the installer. Unsigned → SmartScreen: *More info → Run anyway* |
+| Linux x64 | `.AppImage` | `chmod +x` then run |
+| Linux x64 | `.deb` | `sudo dpkg -i`, installs to `/opt/NiuBiliTy/` |
+| Safari extension (macOS) | `NiuBiliTy-Safari-macos-arm64.zip` | Follow the [Safari install guide](./extension/README.md#safari-install-macos) |
 
 `ffmpeg` is optional but required for transcode playback:
 `brew install ffmpeg` (macOS) · `sudo apt install ffmpeg` (Linux) · `ffmpeg.exe` on `PATH` (Windows).
@@ -134,6 +139,8 @@ npm run build:linux  # AppImage + .deb (x64)
 npm run test:unit    # unit tests + indexer tests
 npm run test         # 17 isolated e2e suites
 ```
+
+The `test/` directory is kept in the source repository for regression testing and contributions; it is excluded from packaged installers.
 
 Cross-built installers are untested on real Windows/Linux — `.github/workflows/build.yml` builds all
 three on native runners and uploads the artifacts.

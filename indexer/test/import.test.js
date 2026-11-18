@@ -24,5 +24,12 @@ test('导入 dhtdump TSV 与 JSONL，并给已有的无名条目补名称', asyn
   assert.equal(store.map.get(h1).size, 2 * 1024 * 1024);
   await importInto(store, jsonl);
   assert.equal(store.map.get(h3).name, '中文 资源');
+
+  const h4 = '0'.repeat(39) + '4';
+  const csv = path.join(dir, 'c.csv');
+  fs.writeFileSync(csv, `infohash,name,size_bytes,created_unix,seeders\n${h4},"Show, ""Pilot"" 1080p",100,1,7\n`);
+  await importInto(store, csv);
+  assert.equal(store.map.get(h4).name, 'Show, "Pilot" 1080p');
+  assert.equal(store.map.get(h4).peers, 7);
   fs.rmSync(dir, { recursive: true });
 });

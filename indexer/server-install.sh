@@ -55,7 +55,7 @@ if ! flock -n 9; then echo "已有一个实例在跑，退出" ; exit 0; fi
 
 while true; do
   echo $$ > "$ROOT/index.pid"
-  "$ROOT/runtime/bin/node" --max-old-space-size=\${INDEX_HEAP_MB:-6144} run.js >> "$ROOT/index.log" 2>&1
+  "$ROOT/runtime/bin/node" --max-old-space-size=\${INDEX_HEAP_MB:-12288} run.js >> "$ROOT/index.log" 2>&1
   code=\$?
   echo "\$(date -Is) [watchdog] node 退出 code=\$code，3 秒后重启" >> "$ROOT/index.log"
   sleep 3

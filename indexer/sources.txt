@@ -1,0 +1,35 @@
+# 索引的公开元数据来源（每行一个文件或 URL；# 为注释；{hex2} 展开为 00..ff）
+# 自动识别格式：.tsv（dhtdump）、.csv（torrents-csv 或 TPB/rutracker 备份）、.jsonl
+# 请自行确认这些数据的使用是否合规；数据只会写入你自己的索引库。
+
+# torrents-csv：近年资源，带做种数
+https://codeberg.org/heretic/torrents-csv-data/raw/branch/main/torrents.csv
+
+# wangroot/dhtdump：2020 年的 DHT 抓取（约 970 万条）
+https://raw.githubusercontent.com/wangroot/dhtdump/master/hash-{hex2}.tsv
+
+# darksun-misc/piratebay-db-dump：TPB 2004–2019 全量
+https://raw.githubusercontent.com/darksun-misc/piratebay-db-dump/master/piratebay_db_dump_2004_03_25T22_03_00_to_2015_10_27T04_10_22.csv
+https://raw.githubusercontent.com/darksun-misc/piratebay-db-dump/master/piratebay_db_dump_2015_10_27T04_10_50_to_2019_09_14T22_09_31.csv
+
+# 同仓库里的 rutracker 2020-09 备份（俄语资源）
+https://raw.githubusercontent.com/darksun-misc/piratebay-db-dump/master/rutracker_2020_09_27/category_2.csv
+https://raw.githubusercontent.com/darksun-misc/piratebay-db-dump/master/rutracker_2020_09_27/category_8.csv
+https://raw.githubusercontent.com/darksun-misc/piratebay-db-dump/master/rutracker_2020_09_27/category_9.csv
+https://raw.githubusercontent.com/darksun-misc/piratebay-db-dump/master/rutracker_2020_09_27/category_10.csv
+https://raw.githubusercontent.com/darksun-misc/piratebay-db-dump/master/rutracker_2020_09_27/category_11.csv
+https://raw.githubusercontent.com/darksun-misc/piratebay-db-dump/master/rutracker_2020_09_27/category_18.csv
+https://raw.githubusercontent.com/darksun-misc/piratebay-db-dump/master/rutracker_2020_09_27/category_19.csv
+https://raw.githubusercontent.com/darksun-misc/piratebay-db-dump/master/rutracker_2020_09_27/category_20.csv
+https://raw.githubusercontent.com/darksun-misc/piratebay-db-dump/master/rutracker_2020_09_27/category_22.csv
+https://raw.githubusercontent.com/darksun-misc/piratebay-db-dump/master/rutracker_2020_09_27/category_23.csv
+https://raw.githubusercontent.com/darksun-misc/piratebay-db-dump/master/rutracker_2020_09_27/category_24.csv
+https://raw.githubusercontent.com/darksun-misc/piratebay-db-dump/master/rutracker_2020_09_27/category_25.csv
+https://raw.githubusercontent.com/darksun-misc/piratebay-db-dump/master/rutracker_2020_09_27/category_26.csv
+https://raw.githubusercontent.com/darksun-misc/piratebay-db-dump/master/rutracker_2020_09_27/category_28.csv
+https://raw.githubusercontent.com/darksun-misc/piratebay-db-dump/master/rutracker_2020_09_27/category_29.csv
+https://raw.githubusercontent.com/darksun-misc/piratebay-db-dump/master/rutracker_2020_09_27/category_31.csv
+https://raw.githubusercontent.com/darksun-misc/piratebay-db-dump/master/rutracker_2020_09_27/category_33.csv
+https://raw.githubusercontent.com/darksun-misc/piratebay-db-dump/master/rutracker_2020_09_27/category_34.csv
+https://raw.githubusercontent.com/darksun-misc/piratebay-db-dump/master/rutracker_2020_09_27/category_35.csv
+https://raw.githubusercontent.com/darksun-misc/piratebay-db-dump/master/rutracker_2020_09_27/category_37.csv

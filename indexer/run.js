@@ -11,6 +11,7 @@ import path from 'node:path';
 import { Store } from './store.js';
 import { Crawler } from './crawler.js';
 import { createServer } from './server.js';
+import { startUpdater } from './updater.js';
 
 const PORT = Number(process.env.INDEX_PORT) || 8899;
 const HOST = process.env.INDEX_HOST || '127.0.0.1';
@@ -80,9 +81,20 @@ function log(...args) {
 
   const saveTimer = setInterval(() => store.save().catch(() => {}), 60000);
 
+  // 定期导入公开来源（INDEX_SOURCES 清单；INDEX_IMPORT_DAYS=0 关闭）
+  const importDays = process.env.INDEX_IMPORT_DAYS === undefined ? 7 : Number(process.env.INDEX_IMPORT_DAYS);
+  const stopUpdater = importDays > 0 ? startUpdater({
+    store,
+    log,
+    sourcesFile: process.env.INDEX_SOURCES || new URL('./sources.txt', import.meta.url).pathname,
+    stateFile: DB + '.import-state.json',
+    intervalDays: importDays
+  }) : () => {};
+
   const shutdown = async () => {
     log('[run] 退出中，保存索引…');
     clearInterval(saveTimer);
+    stopUpdater();
     await store.save(true).catch(() => {});
     server.close();
     await crawler.stop().catch(() => {});

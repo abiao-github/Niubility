@@ -63,6 +63,16 @@ function parseLine(line, format) {
     const e = JSON.parse(line);
     return { infohash: String(e.infohash || '').toLowerCase(), name: e.name, size: e.size, files: e.files };
   }
+  if (format === 'tpb') {
+    // thepiratebay / rutracker 备份：时间;infohash(base64);名称;大小(字节)
+    const m = /^[^;]*;([^;]+);(.*);(\d+)\s*$/.exec(line);
+    if (!m) throw new Error('bad');
+    const hash = Buffer.from(m[1], 'base64');
+    if (hash.length !== 20) throw new Error('bad');
+    let name = m[2].trim();
+    if (name.length > 1 && name.startsWith('"') && name.endsWith('"')) name = name.slice(1, -1).replace(/""/g, '"');
+    return { infohash: hash.toString('hex'), name, size: parseInt(m[3], 10) || 0 };
+  }
   const [hash, files, sizeMb, ...rest] = line.split('\t');
   return {
     infohash: hash.trim().toLowerCase(),
@@ -72,44 +82,86 @@ function parseLine(line, format) {
   };
 }
 
+// 已有条目：只补全缺失字段，热度取较大值（重复导入不会让热度虚增）
+function merge(store, e) {
+  const prev = store.map.get(e.infohash);
+  if (!prev) return store.upsert(e) ? 'added' : 'skip';
+  let changed = false;
+  if (e.name && !prev.name) { prev.name = e.name; changed = true; }
+  if (e.size && !prev.size) { prev.size = e.size; changed = true; }
+  if (e.files && !prev.files) { prev.files = e.files; changed = true; }
+  if (e.peers && e.peers > (prev.peers || 0)) { prev.peers = e.peers; changed = true; }
+  if (changed) store.dirty = true;
+  return changed ? 'merged' : 'skip';
+}
+
 export async function importInto(store, src, log = () => {}) {
-  const format = /\.jsonl(\?|$)/.test(src) ? 'jsonl' : /\.csv(\?|$)/.test(src) ? 'csv' : 'tsv';
+  let format = /\.jsonl(\?|$)/.test(src) ? 'jsonl' : /\.csv(\?|$)/.test(src) ? 'csv' : 'tsv';
   const rl = readline.createInterface({ input: await openSource(src), crlfDelay: Infinity });
   let added = 0;
   let named = 0;
   let bad = 0;
   for await (const line of rl) {
     if (!line.trim()) continue;
+    if (line.startsWith('#ADDED;')) { format = 'tpb'; continue; }
+    if (line.startsWith('#')) continue;
     let e;
     try { e = parseLine(line, format); } catch (err) { if (err.message !== 'header') bad += 1; continue; }
-    if (!e.name) { bad += 1; continue; }
-    const hadEntry = store.map.has(e.infohash);
-    const hadName = hadEntry && !!store.map.get(e.infohash).name;
-    if (store.upsert(e)) added += 1;
-    else if (hadEntry && !hadName) named += 1;
+    if (!e.name || !/^[0-9a-f]{40}$/.test(e.infohash)) { bad += 1; continue; }
+    const hadName = !!(store.map.get(e.infohash) || {}).name;
+    const r = merge(store, e);
+    if (r === 'added') added += 1;
+    else if (r === 'merged' && !hadName) named += 1;
   }
   log(`[import] ${src}：新增 ${added}，补全名称 ${named}，跳过 ${bad}`);
   return { added, named, bad };
 }
 
-async function main() {
-  const sources = process.argv.slice(2);
-  if (!sources.length) {
-    console.error('用法：INDEX_DB=… node import.js <文件或 URL>...');
-    process.exit(2);
-  }
-  const file = process.env.INDEX_DB || path.join(os.homedir(), 'niubility-index', 'index.jsonl.gz');
-  const log = (m) => console.log(new Date().toISOString(), m);
-  const store = new Store({ file, log });
-  await store.load();
+// 带重试的批量导入（GitHub raw 偶尔会 503 限流）
+export async function importAll(store, sources, log = () => {}) {
+  const total = { added: 0, named: 0, bad: 0, failed: 0 };
   for (const src of sources) {
-    for (let attempt = 1; attempt <= 5; attempt++) {
-      try { await importInto(store, src, log); break; } catch (err) {
+    let ok = false;
+    for (let attempt = 1; attempt <= 5 && !ok; attempt++) {
+      try {
+        const r = await importInto(store, src, log);
+        total.added += r.added; total.named += r.named; total.bad += r.bad;
+        ok = true;
+      } catch (err) {
         log(`[import] ${src} 失败（第 ${attempt} 次）：${err.message || err.code || err}`);
         await new Promise((r) => setTimeout(r, attempt * 3000));
       }
     }
+    if (!ok) total.failed += 1;
   }
+  return total;
+}
+
+// 读取来源清单：每行一个文件或 URL，# 开头为注释；{hex2} 会展开成 00..ff
+export function readSources(file) {
+  const out = [];
+  for (const raw of fs.readFileSync(file, 'utf8').split('\n')) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    if (line.includes('{hex2}')) {
+      for (let i = 0; i < 256; i++) out.push(line.replace('{hex2}', i.toString(16).padStart(2, '0')));
+    } else out.push(line);
+  }
+  return out;
+}
+
+async function main() {
+  const args = process.argv.slice(2);
+  if (!args.length) {
+    console.error('用法：INDEX_DB=… node import.js <文件或 URL>...   或   node import.js --list sources.txt');
+    process.exit(2);
+  }
+  const sources = args[0] === '--list' ? readSources(args[1]) : args;
+  const file = process.env.INDEX_DB || path.join(os.homedir(), 'niubility-index', 'index.jsonl.gz');
+  const log = (m) => console.log(new Date().toISOString(), m);
+  const store = new Store({ file, log });
+  await store.load();
+  await importAll(store, sources, log);
   await store.save(true);
   log(`[import] 完成，共 ${store.size} 条，其中有名称 ${store.stats().named}`);
 }

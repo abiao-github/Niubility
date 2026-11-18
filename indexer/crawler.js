@@ -63,23 +63,34 @@ function parseMetadata(raw) {
 }
 
 /** BEP-9：连到 peer，握手后请求 metadata，校验 infohash */
-function fetchMetadataFromPeer(infohashHex, host, port, timeoutMs) {
+function fetchMetadataFromPeer(infohashHex, host, port, timeoutMs, opts = {}) {
+  const { signal, connectTimeoutMs = Math.min(5000, timeoutMs) } = opts;
   return new Promise((resolve, reject) => {
     const infoHashBuf = Buffer.from(infohashHex, 'hex');
     const socket = net.connect({ host, port });
     const wire = new Protocol();
     let done = false;
+    // 失败阶段：connect（没连上）→ handshake（连上了但没握手）→ metadata（握手了但没给元数据）
+    let stage = 'connect';
 
     const cleanup = (err, value) => {
       if (done) return;
       done = true;
       clearTimeout(timer);
+      clearTimeout(connectTimer);
+      if (signal) signal.removeEventListener('abort', onAbort);
       try { wire.destroy(); } catch { /* ignore */ }
       try { socket.destroy(); } catch { /* ignore */ }
-      if (err) reject(err); else resolve(value);
+      if (err) { err.stage = err.stage || stage; reject(err); } else resolve(value);
     };
+    const onAbort = () => cleanup(new Error('aborted'));
+    if (signal) {
+      if (signal.aborted) { queueMicrotask(onAbort); } else signal.addEventListener('abort', onAbort, { once: true });
+    }
 
     const timer = setTimeout(() => cleanup(new Error('metadata timeout')), timeoutMs);
+    const connectTimer = setTimeout(() => cleanup(new Error('connect timeout')), connectTimeoutMs);
+    socket.on('connect', () => { clearTimeout(connectTimer); stage = 'handshake'; });
 
     socket.on('error', (err) => cleanup(err));
     socket.setTimeout(timeoutMs, () => cleanup(new Error('socket timeout')));
@@ -89,6 +100,7 @@ function fetchMetadataFromPeer(infohashHex, host, port, timeoutMs) {
     wire.on('error', (err) => cleanup(err));
 
     wire.on('handshake', () => {
+      stage = 'metadata';
       try { wire.ut_metadata.fetch(); } catch (err) { cleanup(err); }
     });
 
@@ -116,28 +128,38 @@ function fetchMetadataFromPeer(infohashHex, host, port, timeoutMs) {
   });
 }
 
+const FAIL_TTL_MS = 6 * 3600 * 1000;   // 失败过的哈希 6 小时后允许重试
+const FAIL_MAX = 200000;               // 失败记录上限，防止内存无限增长
+const LOOKUP_QUEUE_MAX = 5000;         // 没有来源 peer 的待抓队列上限，超出丢弃最旧的
+const PEERS_PER_HASH = 8;              // 对同一个哈希并发尝试的 peer 数
+
 class Crawler {
-  constructor({ store, port = 6881, maxFetching = 8, fetchTimeout = 20000, log = () => {} }) {
+  constructor({ store, port = 6881, nodeId = null, recvBufferBytes = 8 * 1024 * 1024, maxFetching = 16, fetchTimeout = 12000, log = () => {} }) {
     this.store = store;
     this.port = port;
+    this.nodeId = nodeId;
+    this.recvBufferBytes = recvBufferBytes;
     this.maxFetching = maxFetching;
     this.fetchTimeout = fetchTimeout;
     this.log = log;
 
     this.dht = null;
-    this.queue = [];
+    this.hotQueue = [];      // 带来源 peer（announce_peer）的优先队列
+    this.queue = [];         // 没有来源 peer（get_peers）的队列，需要先 lookup
     this.queued = new Set();
     this.fetching = 0;
-    this.failed = new Set();
+    this.failed = new Map(); // hex -> 失败时间
     this.startedAt = Date.now();
-    this.stats = { announces: 0, queries: 0, fetched: 0, failed: 0, dhtNodes: 0, noPeer: 0, lookups: 0 };
+    this.stats = { announces: 0, queries: 0, fetched: 0, failed: 0, dhtNodes: 0, noPeer: 0, lookups: 0, lookupHit: 0 };
+    this.failStages = {};  // 失败阶段/原因计数：看是连不上、握手不了还是对端不给元数据
     this.failures = [];   // 最近若干次失败的原因，方便诊断
     this.debug = { enqueue: 0, queued: 0, skipNamed: 0, skipDup: 0, skipFail: 0, skipNoHex: 0, samples: [] };
   }
 
   start() {
     // bittorrent-dht v11：构造函数里会自动 bootstrap，收查询靠 client 的事件
-    this.dht = new DHT({ concurrency: 16, maxTables: 2000 });
+    this.dht = new DHT({ concurrency: 16, maxTables: 2000, ...(this.nodeId ? { nodeId: this.nodeId } : {}) });
+    this.dht.setMaxListeners(0);   // 每个 lookup 都会挂一个 peer 监听
     this.dht.on('ready', () => {
       this.log('[crawler] DHT ready');
       this.seedPresence(12);            // 先把自己塞进一批节点的路由表
@@ -173,6 +195,7 @@ class Crawler {
 
     this.dht.listen(this.port, () => {
       this.log('[crawler] DHT 监听 UDP ' + this.dht.address().port);
+      this.enlargeRecvBuffer();
     });
 
     // 让别人把我们放进路由表：对随机目标做 lookup（v11 没有公开的 find_node）
@@ -189,6 +212,18 @@ class Crawler {
     }, 60000);
 
     this.pumpTimer = setInterval(() => this.pump(), 400);
+  }
+
+  /** 内核默认的 UDP 接收缓冲区很小，突发流量会被直接丢弃；实际大小受 net.core.rmem_max 限制 */
+  enlargeRecvBuffer() {
+    try {
+      const sock = this.dht._rpc && this.dht._rpc.socket;
+      if (!sock || typeof sock.setRecvBufferSize !== 'function') return;
+      sock.setRecvBufferSize(this.recvBufferBytes);
+      this.log(`[crawler] UDP 接收缓冲 ${sock.getRecvBufferSize()} 字节`);
+    } catch (err) {
+      this.log('[crawler] 无法调整 UDP 接收缓冲: ' + err.message);
+    }
   }
 
   seedPresence(times) {
@@ -214,12 +249,30 @@ class Crawler {
     const entry = this.store.map.get(hex);
     if (entry && entry.name) { this.debug.skipNamed += 1; return; }
     if (!host || !port) this.stats.noPeer += 1;
-    if (this.failed.has(hex)) { this.debug.skipFail += 1; return; }
+    // announce 带来的真实 peer 值得重试，即使之前仅凭 lookup 失败过
+    if (!(host && port) && this.isFailed(hex)) { this.debug.skipFail += 1; return; }
     if (this.queued.has(hex)) { this.debug.skipDup += 1; return; }
     this.queued.add(hex);
-    this.queue.push({ hex, host: host || null, port: port || null });
+    if (host && port) {
+      this.hotQueue.push({ hex, host, port });
+    } else {
+      this.queue.push({ hex, host: null, port: null });
+      while (this.queue.length > LOOKUP_QUEUE_MAX) this.queued.delete(this.queue.shift().hex);
+    }
     this.debug.queued += 1;
     if (this.debug.samples.length < 5) this.debug.samples.push({ hex: hex.slice(0, 8), host, port });
+  }
+
+  isFailed(hex) {
+    const at = this.failed.get(hex);
+    if (at === undefined) return false;
+    if (Date.now() - at > FAIL_TTL_MS) { this.failed.delete(hex); return false; }
+    return true;
+  }
+
+  markFailed(hex) {
+    this.failed.set(hex, Date.now());
+    if (this.failed.size > FAIL_MAX) this.failed.delete(this.failed.keys().next().value);
   }
 
   /** 对某个 infohash 做一次 DHT lookup，收集 peer 列表 */
@@ -232,7 +285,7 @@ class Crawler {
         try {
           if (infoHash && infoHash.toString('hex').toLowerCase() !== wanted) return;
           const key = peer.host + ':' + peer.port;
-          if (seen.has(key) || peers.length >= 8) return;
+          if (seen.has(key) || peers.length >= 16) return;
           seen.add(key);
           peers.push(peer);
         } catch { /* ignore */ }
@@ -253,17 +306,26 @@ class Crawler {
     });
   }
 
-  recordFailure(hex, peer, reason) {
-    this.failures.push({ hex: hex.slice(0, 8), peer: peer ? peer.host + ':' + peer.port : '?', reason: String(reason || '').slice(0, 120) });
+  recordFailure(hex, peer, err) {
+    const reason = String((err && err.message) || err || '');
+    const bucket = (err && err.code) || reason;
+    const key = (err && err.stage ? err.stage + ':' : '') + String(bucket).slice(0, 40);
+    this.failStages[key] = (this.failStages[key] || 0) + 1;
+    this.failures.push({ hex: hex.slice(0, 8), peer: peer ? peer.host + ':' + peer.port : '?', reason: reason.slice(0, 120), stage: err && err.stage });
     if (this.failures.length > 20) this.failures.shift();
   }
 
+  next() {
+    return this.hotQueue.shift() || this.queue.shift();
+  }
+
   pump() {
-    while (this.fetching < this.maxFetching && this.queue.length) {
-      const item = this.queue.shift();
+    while (this.fetching < this.maxFetching && (this.hotQueue.length || this.queue.length)) {
+      const item = this.next();
       this.queued.delete(item.hex);
-      // 没有来源 peer 的（来自 get_peers）也要继续：attemptFetch 会先用 lookup 找 peer
-      if (this.failed.has(item.hex)) continue;
+      if (!item.host && this.isFailed(item.hex)) continue;
+      const known = this.store.map.get(item.hex);
+      if (known && known.name) continue;
       this.fetching += 1;
       this.attemptFetch(item)
         .then((meta) => {
@@ -272,53 +334,64 @@ class Crawler {
             this.store.upsert({ infohash: item.hex, ...meta });
           } else {
             this.stats.failed += 1;
-            this.failed.add(item.hex);
+            this.markFailed(item.hex);
           }
         })
         .catch(() => {
           this.stats.failed += 1;
-          this.failed.add(item.hex);
+          this.markFailed(item.hex);
         })
         .finally(() => { this.fetching -= 1; });
     }
   }
 
-  /** 先试 announce 来源，再靠 DHT lookup 找几个 peer 重试 */
+  /** 先试 announce 来源 peer；不行就 DHT lookup，并发尝试多个 peer，先拿到的为准 */
   async attemptFetch(item) {
     const tried = new Set();
-    const tryPeer = async (host, port) => {
-      const key = host + ':' + port;
-      if (!host || !port || tried.has(key)) return null;
+    const ac = new AbortController();
+    const run = async (peer, timeout) => {
+      const key = peer.host + ':' + peer.port;
+      if (!peer.host || !peer.port || tried.has(key)) return null;
       tried.add(key);
       try {
-        return await fetchMetadataFromPeer(item.hex, host, port, this.fetchTimeout);
+        return await fetchMetadataFromPeer(item.hex, peer.host, peer.port, timeout, { signal: ac.signal });
       } catch (err) {
-        this.recordFailure(item.hex, { host, port }, err.message);
+        if (err.message !== 'aborted') this.recordFailure(item.hex, peer, err);
         return null;
       }
     };
 
-    const first = item.host ? await tryPeer(item.host, item.port) : null;
-    if (first) return first;
-
-    // 失败一次后，用 lookup 补几个 peer 再试（最多 3 个，避免拖太久）
-    const peers = await this.lookupPeers(item.hex);
-    let attempts = 0;
-    for (const peer of peers) {
-      if (attempts >= 6) break;
-      attempts += 1;
-      const meta = await tryPeer(peer.host, peer.port);
-      if (meta) return meta;
+    if (item.host) {
+      const first = await run({ host: item.host, port: item.port }, this.fetchTimeout);
+      if (first) return first;
     }
-    return null;
+
+    const found = await this.lookupPeers(item.hex);
+    const batch = found.filter((p) => !tried.has(p.host + ':' + p.port)).slice(0, PEERS_PER_HASH);
+    if (!batch.length) { this.stats.noPeer += 1; return null; }
+    this.stats.lookupHit += 1;
+
+    return new Promise((resolve) => {
+      let pending = batch.length;
+      let settled = false;
+      for (const peer of batch) {
+        run(peer, this.fetchTimeout).then((meta) => {
+          pending -= 1;
+          if (settled) return;
+          if (meta) { settled = true; ac.abort(); resolve(meta); } else if (pending === 0) resolve(null);
+        });
+      }
+    });
   }
 
   statsSnapshot() {
     return {
       ...this.stats,
-      queue: this.queue.length,
+      queue: this.queue.length + this.hotQueue.length,
+      hotQueue: this.hotQueue.length,
       fetching: this.fetching,
       failedTotal: this.failed.size,
+      failStages: this.failStages,
       failures: this.failures.slice(-5),
       debug: this.debug,
       uptimeSec: Math.round((Date.now() - this.startedAt) / 1000)

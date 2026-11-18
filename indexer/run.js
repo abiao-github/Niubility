@@ -2,8 +2,10 @@
 
 // 索引服务入口：DHT 爬虫 + HTTP 查询接口
 // 环境变量：INDEX_PORT(8899) INDEX_HOST(127.0.0.1) INDEX_TOKEN DHT_PORT(6881)
-//          INDEX_DB(~/niubility-index/index.jsonl.gz) INDEX_MAX_FETCHING(6)
+//          INDEX_DB(~/niubility-index/index.jsonl.gz) INDEX_MAX_FETCHING(16)
+//          DHT_WORKERS(4) DHT_RCVBUF(8388608)
 
+import crypto from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
 import { Store } from './store.js';
@@ -34,12 +36,17 @@ function log(...args) {
   await store.load();
 
   // 同时跑多个 DHT 节点：每个节点有自己的路由表和 ID，能覆盖到不同的 announce 流
+  // 节点 ID 的前两个字节均匀铺开，各节点负责不同区段的 announce 流
   const crawlers = [];
   for (let i = 0; i < DHT_WORKERS; i++) {
+    const nodeId = crypto.randomBytes(20);
+    nodeId.writeUInt16BE(Math.floor((i * 65536) / DHT_WORKERS), 0);
     const c = new Crawler({
       store,
       port: DHT_PORT + i,
-      maxFetching: Number(process.env.INDEX_MAX_FETCHING) || 6,
+      nodeId,
+      recvBufferBytes: Number(process.env.DHT_RCVBUF) || 8 * 1024 * 1024,
+      maxFetching: Number(process.env.INDEX_MAX_FETCHING) || 16,
       log: (msg) => log(msg.replace('[crawler]', `[crawler#${i}]`))
     });
     c.start();
@@ -49,10 +56,11 @@ function log(...args) {
 
   const crawler = {
     statsSnapshot() {
-      const out = { announces: 0, queries: 0, fetched: 0, failed: 0, noPeer: 0, queue: 0, fetching: 0, failedTotal: 0, lookups: 0, nodes: crawlers.length, failures: [] };
+      const out = { announces: 0, queries: 0, fetched: 0, failed: 0, noPeer: 0, queue: 0, hotQueue: 0, fetching: 0, failedTotal: 0, lookups: 0, lookupHit: 0, nodes: crawlers.length, failStages: {}, failures: [] };
       for (const c of crawlers) {
         const s = c.statsSnapshot();
-        for (const k of ['announces', 'queries', 'fetched', 'failed', 'noPeer', 'queue', 'fetching', 'failedTotal', 'lookups']) out[k] += s[k] || 0;
+        for (const k of ['announces', 'queries', 'fetched', 'failed', 'noPeer', 'queue', 'hotQueue', 'fetching', 'failedTotal', 'lookups', 'lookupHit']) out[k] += s[k] || 0;
+        for (const [k, v] of Object.entries(s.failStages || {})) out.failStages[k] = (out.failStages[k] || 0) + v;
         if (Array.isArray(s.failures)) out.failures.push(...s.failures);
         if (s.debug) {
           out.debug = out.debug || { enqueue: 0, queued: 0, skipNamed: 0, skipDup: 0, skipFail: 0, skipNoHex: 0, samples: [] };
